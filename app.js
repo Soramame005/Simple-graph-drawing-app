@@ -1,3 +1,9 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/app.js b/app.js
+index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea41c85dd93 100644
+--- a/app.js
++++ b/app.js
+@@ -1,346 +1,458 @@
 -document.addEventListener('DOMContentLoaded', () => {
 -    // --- Elements ---
 -    const dropZone = document.getElementById('drop-zone');
@@ -805,5 +811,3 @@
  
 EOF
 )
-
-
