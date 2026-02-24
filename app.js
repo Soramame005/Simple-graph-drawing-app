@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const yLabelInput = document.getElementById('y-label');
     const colorInput = document.getElementById('line-color');
     const colorText = document.getElementById('line-color-text');
+    const xColumnSelect = document.getElementById('x-column-select');
+    const yColumnSelect = document.getElementById('y-column-select');
     const saveBtn = document.getElementById('save-btn');
 
     // Dataset Management
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     initChart();
+    initializeColumnSelectors();
 
     // --- Event Listeners ---
 
@@ -74,13 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     colorInput.addEventListener('input', (e) => {
         colorText.value = e.target.value;
         if (activeDatasetIndex !== -1 && chartInstance) {
-            // Update active dataset color
             chartInstance.data.datasets[activeDatasetIndex].borderColor = e.target.value;
             chartInstance.data.datasets[activeDatasetIndex].pointBackgroundColor = e.target.value;
             chartInstance.update();
-            renderDatasetList(); // Update list dot
+            renderDatasetList();
         }
     });
+
+    xColumnSelect.addEventListener('change', updateActiveDatasetColumns);
+    yColumnSelect.addEventListener('change', updateActiveDatasetColumns);
 
     saveBtn.addEventListener('click', saveGraph);
     clearBtn.addEventListener('click', clearAll);
@@ -88,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Functions ---
 
     function initChart() {
-        // Plugin to fill background white (for export)
         const whiteBackgroundPlugin = {
             id: 'customCanvasBackgroundColor',
             beforeDraw: (chart) => {
@@ -102,9 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         chartInstance = new Chart(ctx, {
-            type: 'line', // 'line' with linear x-axis behaves like scatter but connected
+            type: 'line',
             data: {
-                datasets: [] // Start empty
+                datasets: []
             },
             plugins: [whiteBackgroundPlugin],
             options: {
@@ -123,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         padding: { bottom: 20 }
                     },
                     legend: {
-                        display: true, // Show legend since we have multiple datasets
+                        display: true,
                         labels: {
                             color: '#000000',
                             font: { family: 'sans-serif' }
@@ -135,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 scales: {
                     x: {
-                        type: 'linear', // Critical for scientific multi-plot
+                        type: 'linear',
                         position: 'bottom',
                         title: {
                             display: true,
@@ -194,39 +198,73 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
-            const dataPoints = parseData(text);
-            addDataset(file.name, dataPoints);
+            const { rows, maxColumns } = parseRows(text);
+            if (rows.length === 0) {
+                return;
+            }
+
+            prepareColumnSelectorsForColumnCount(maxColumns);
+
+            const selectedX = parseInt(xColumnSelect.value, 10);
+            const selectedY = parseInt(yColumnSelect.value, 10);
+            const xColumn = Number.isInteger(selectedX) && selectedX < maxColumns ? selectedX : 0;
+            const yColumn = Number.isInteger(selectedY) && selectedY < maxColumns
+                ? selectedY
+                : Math.min(1, maxColumns - 1);
+
+            const dataPoints = buildPoints(rows, xColumn, yColumn, maxColumns);
+            addDataset(file.name, dataPoints, { rows, maxColumns, xColumn, yColumn });
+            syncColumnSelectorsWithDataset(chartInstance.data.datasets[activeDatasetIndex]);
         };
         reader.readAsText(file);
 
-        // Reset input so same file can be selected again if cleared
         fileInput.value = '';
     }
 
-    function parseData(text) {
+    function parseRows(text) {
         const lines = text.trim().split(/\r?\n/);
+        const rows = [];
+        let maxColumns = 0;
+
+        lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+
+            const parts = trimmed.split(/[\s,]+/);
+            const numericRow = parts.map((part) => parseFloat(part));
+            const hasValidNumber = numericRow.some((value) => !isNaN(value));
+            if (!hasValidNumber) return;
+
+            maxColumns = Math.max(maxColumns, numericRow.length);
+            rows.push(numericRow);
+        });
+
+        return { rows, maxColumns };
+    }
+
+    function buildPoints(rows, xColumn, yColumn, maxColumns) {
         const points = [];
 
-        lines.forEach((line, index) => {
-            const parts = line.trim().split(/[\s,]+/);
-
-            if (parts.length >= 2) {
-                const x = parseFloat(parts[0]);
-                const y = parseFloat(parts[1]);
-                if (!isNaN(x) && !isNaN(y)) {
-                    points.push({ x, y });
-                }
-            } else if (parts.length === 1) {
-                const y = parseFloat(parts[0]);
+        rows.forEach((row, index) => {
+            if (maxColumns === 1) {
+                const y = row[0];
                 if (!isNaN(y)) {
-                    points.push({ x: index, y }); // Use index as X if missing
+                    points.push({ x: index, y });
                 }
+                return;
+            }
+
+            const x = row[xColumn];
+            const y = row[yColumn];
+            if (!isNaN(x) && !isNaN(y)) {
+                points.push({ x, y });
             }
         });
+
         return points;
     }
 
-    function addDataset(name, dataPoints) {
+    function addDataset(name, dataPoints, meta) {
         const nextIndex = chartInstance.data.datasets.length;
         const color = colorPalette[nextIndex % colorPalette.length];
 
@@ -240,16 +278,90 @@ document.addEventListener('DOMContentLoaded', () => {
             pointRadius: 2,
             pointBackgroundColor: color,
             fill: false,
-            showLine: true
+            showLine: true,
+            rawRows: meta.rows,
+            maxColumns: meta.maxColumns,
+            xColumn: meta.xColumn,
+            yColumn: meta.yColumn
         };
 
         chartInstance.data.datasets.push(newDataset);
         chartInstance.update();
 
-        // Select the newly added dataset
         activeDatasetIndex = nextIndex;
         renderDatasetList();
         updateColorInputs(color);
+    }
+
+    function updateActiveDatasetColumns() {
+        if (activeDatasetIndex === -1 || !chartInstance) return;
+
+        const dataset = chartInstance.data.datasets[activeDatasetIndex];
+        if (!dataset) return;
+
+        const xColumn = parseInt(xColumnSelect.value, 10);
+        const yColumn = parseInt(yColumnSelect.value, 10);
+
+        if (!Number.isInteger(xColumn) || !Number.isInteger(yColumn)) return;
+
+        dataset.xColumn = xColumn;
+        dataset.yColumn = yColumn;
+        dataset.data = buildPoints(dataset.rawRows, xColumn, yColumn, dataset.maxColumns);
+
+        chartInstance.update();
+        renderDatasetList();
+    }
+
+    function initializeColumnSelectors() {
+        prepareColumnSelectorsForColumnCount(2);
+    }
+
+    function prepareColumnSelectorsForColumnCount(maxColumns) {
+        const targetColumns = Math.max(1, maxColumns);
+        const selectedX = parseInt(xColumnSelect.value, 10);
+        const selectedY = parseInt(yColumnSelect.value, 10);
+
+        const nextX = Number.isInteger(selectedX) ? Math.min(selectedX, targetColumns - 1) : 0;
+        const nextYDefault = targetColumns > 1 ? 1 : 0;
+        const nextY = Number.isInteger(selectedY) ? Math.min(selectedY, targetColumns - 1) : nextYDefault;
+
+        const columnOptions = Array.from({ length: targetColumns }, (_, index) => ({
+            value: String(index),
+            label: `Column ${index + 1}`
+        }));
+
+        populateColumnSelect(xColumnSelect, columnOptions, nextX);
+        populateColumnSelect(yColumnSelect, columnOptions, nextY);
+
+        const oneColumnOnly = targetColumns <= 1;
+        xColumnSelect.disabled = oneColumnOnly;
+        yColumnSelect.disabled = oneColumnOnly;
+    }
+
+    function syncColumnSelectorsWithDataset(dataset) {
+        if (!dataset) {
+            initializeColumnSelectors();
+            return;
+        }
+
+        prepareColumnSelectorsForColumnCount(dataset.maxColumns);
+        xColumnSelect.value = String(dataset.xColumn);
+        yColumnSelect.value = String(dataset.yColumn);
+    }
+
+    function populateColumnSelect(selectEl, options, selectedValue) {
+        selectEl.innerHTML = '';
+
+        options.forEach((option) => {
+            const optionEl = document.createElement('option');
+            optionEl.value = option.value;
+            optionEl.textContent = option.label;
+            selectEl.appendChild(optionEl);
+        });
+
+        const normalizedSelectedValue = String(selectedValue);
+        const hasSelectedValue = options.some((option) => option.value === normalizedSelectedValue);
+        selectEl.value = hasSelectedValue ? normalizedSelectedValue : options[0]?.value ?? '';
     }
 
     function clearAll() {
@@ -257,6 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstance.update();
         activeDatasetIndex = -1;
         renderDatasetList();
+        initializeColumnSelectors();
         placeholderMsg.style.display = 'block';
     }
 
@@ -264,14 +377,25 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstance.data.datasets.splice(index, 1);
         chartInstance.update();
 
-        // Adjust active index
         if (activeDatasetIndex === index) {
-            activeDatasetIndex = -1; // Deselect if removed active
+            activeDatasetIndex = -1;
         } else if (activeDatasetIndex > index) {
-            activeDatasetIndex--; // Shift down
+            activeDatasetIndex--;
+        }
+
+        if (activeDatasetIndex === -1 && chartInstance.data.datasets.length > 0) {
+            activeDatasetIndex = 0;
         }
 
         renderDatasetList();
+
+        if (activeDatasetIndex !== -1) {
+            const activeDataset = chartInstance.data.datasets[activeDatasetIndex];
+            syncColumnSelectorsWithDataset(activeDataset);
+            updateColorInputs(activeDataset.borderColor);
+        } else {
+            initializeColumnSelectors();
+        }
 
         if (chartInstance.data.datasets.length === 0) {
             placeholderMsg.style.display = 'block';
@@ -287,18 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <div class="color-dot" style="background-color: ${ds.borderColor}"></div>
                 <div class="name" title="${ds.label}">${ds.label}</div>
+                <div class="columns">X:C${ds.xColumn + 1} / Y:C${ds.yColumn + 1}</div>
                 <button class="delete-btn" title="Remove">×</button>
             `;
 
-            // Click to select
             item.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-btn')) return; // Ignore click if delete
+                if (e.target.classList.contains('delete-btn')) return;
                 activeDatasetIndex = index;
                 renderDatasetList();
                 updateColorInputs(ds.borderColor);
+                syncColumnSelectorsWithDataset(ds);
             });
 
-            // Delete action
             item.querySelector('.delete-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 removeDataset(index);
@@ -309,28 +433,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateColorInputs(color) {
-        // Convert to hex if it's not (browsers often return rgb)
-        // Simple check: if it starts with #
         if (color.startsWith('#')) {
             colorInput.value = color;
             colorText.value = color;
-        } else {
-            // Very basic rgb to hex, or just rely on color input accepting generic values?
-            // Input type color needs Hex 7 chars.
-            // If it's a named color or rgba, this might fail to update the picker visual,
-            // but for our palette (hex) it works.
-            // If user enters custom text color, we might need conversion.
-            // For now, assume hex from our palette or valid hex input.
         }
     }
 
     function updateChartConfig() {
         if (!chartInstance) return;
 
-        // Title
         chartInstance.options.plugins.title.text = titleInput.value;
-
-        // Axes
         chartInstance.options.scales.x.title.text = xLabelInput.value;
         chartInstance.options.scales.y.title.text = yLabelInput.value;
 

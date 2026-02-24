@@ -108,7 +108,8 @@ body {
     color: var(--text-secondary);
 }
 
-input[type="text"] {
+input[type="text"],
+select {
     width: 100%;
     background: #334155;
     border: 1px solid transparent;
@@ -119,7 +120,8 @@ input[type="text"] {
     transition: all 0.2s;
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+select:focus {
     outline: none;
     border-color: var(--accent);
     background: #475569;
@@ -190,6 +192,13 @@ input[type="color"]::-webkit-color-swatch {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+}
+
+.dataset-item .columns {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    white-space: nowrap;
 }
 
 .dataset-item .delete-btn {
