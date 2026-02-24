@@ -1,101 +1,221 @@
-<!DOCTYPE html>
-<html lang="ja">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graph Plotter Pro</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap"
-        rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-    <div class="app-container">
-        <!-- Sidebar Controls -->
-        <aside class="sidebar">
-            <div class="brand">
-                <h1>Graph Plotter</h1>
-                <span class="badge">PRO</span>
-            </div>
-
-            <div class="controls-section">
-                <h2>Data Source</h2>
-                <div id="drop-zone" class="drop-zone">
-                    <p>Drop file here</p>
-                    <small>.txt .dat .csv</small>
-                    <input type="file" id="file-input" hidden>
-                </div>
-                <div class="file-info" id="file-info" style="display: none;">
-                    <!-- This will now just be a clear button mostly, or general status -->
-                    <span id="loading-msg">Processed files:</span>
-                </div>
-            </div>
-
-            <!-- New Section: Datasets -->
-            <div class="controls-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                    <h2 style="margin-bottom:0;">Datasets</h2>
-                    <button id="clear-btn"
-                        style="padding: 2px 8px; font-size: 0.7rem; background: #334155; border:none; color:white; border-radius:4px; cursor:pointer;">CLEAR</button>
-                </div>
-                <div id="dataset-list" class="dataset-list">
-                    <!-- Items will be injected here -->
-                </div>
-            </div>
-
-            <div class="controls-section">
-                <h2>Graph Settings</h2>
-
-                <div class="control-group">
-                    <label>Title</label>
-                    <input type="text" id="chart-title" placeholder="Graph Title" value="My Data Graph">
-                </div>
-
-                <div class="control-group">
-                    <label>X Axis Label</label>
-                    <input type="text" id="x-label" placeholder="X Axis" value="X Axis">
-                </div>
-
-                <div class="control-group">
-                    <label>Y Axis Label</label>
-                    <input type="text" id="y-label" placeholder="Y Axis" value="Y Axis">
-                </div>
-
-                <div class="control-group">
-                    <label>Line Color</label>
-                    <div class="color-picker-wrapper">
-                        <input type="color" id="line-color" value="#4F46E5">
-                        <input type="text" id="line-color-text" value="#4F46E5" readonly>
-                    </div>
-                </div>
-            </div>
-
-            <div class="controls-section actions">
-                <button id="save-btn" class="btn btn-primary">
-                    Save Graph
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Chart Area -->
-        <main class="main-content">
-            <div class="chart-wrapper">
-                <canvas id="main-chart"></canvas>
-                <div id="placeholder-msg" class="placeholder-msg">
-                    Drag & Drop a data file to visualize
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script src="app.js"></script>
-</body>
-
-</html>
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/index.html b/index.html
+index 9ff059b75d7e67528441d29f9682f5fdae6990a9..697ca845973053b23f3939be741fd270c306f886 100644
+--- a/index.html
++++ b/index.html
+@@ -1,101 +1,111 @@
+-<!DOCTYPE html>
+-<html lang="ja">
+-
+-<head>
+-    <meta charset="UTF-8">
+-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <title>Graph Plotter Pro</title>
+-    <!-- Fonts -->
+-    <link rel="preconnect" href="https://fonts.googleapis.com">
+-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+-    <link
+-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap"
+-        rel="stylesheet">
+-    <!-- Chart.js -->
+-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+-    <link rel="stylesheet" href="style.css">
+-</head>
+-
+-<body>
+-    <div class="app-container">
+-        <!-- Sidebar Controls -->
+-        <aside class="sidebar">
+-            <div class="brand">
+-                <h1>Graph Plotter</h1>
+-                <span class="badge">PRO</span>
+-            </div>
+-
+-            <div class="controls-section">
+-                <h2>Data Source</h2>
+-                <div id="drop-zone" class="drop-zone">
+-                    <p>Drop file here</p>
+-                    <small>.txt .dat .csv</small>
+-                    <input type="file" id="file-input" hidden>
+-                </div>
+-                <div class="file-info" id="file-info" style="display: none;">
+-                    <!-- This will now just be a clear button mostly, or general status -->
+-                    <span id="loading-msg">Processed files:</span>
+-                </div>
+-            </div>
+-
+-            <!-- New Section: Datasets -->
+-            <div class="controls-section">
+-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+-                    <h2 style="margin-bottom:0;">Datasets</h2>
+-                    <button id="clear-btn"
+-                        style="padding: 2px 8px; font-size: 0.7rem; background: #334155; border:none; color:white; border-radius:4px; cursor:pointer;">CLEAR</button>
+-                </div>
+-                <div id="dataset-list" class="dataset-list">
+-                    <!-- Items will be injected here -->
+-                </div>
+-            </div>
+-
+-            <div class="controls-section">
+-                <h2>Graph Settings</h2>
+-
+-                <div class="control-group">
+-                    <label>Title</label>
+-                    <input type="text" id="chart-title" placeholder="Graph Title" value="My Data Graph">
+-                </div>
+-
+-                <div class="control-group">
+-                    <label>X Axis Label</label>
+-                    <input type="text" id="x-label" placeholder="X Axis" value="X Axis">
+-                </div>
+-
+-                <div class="control-group">
+-                    <label>Y Axis Label</label>
+-                    <input type="text" id="y-label" placeholder="Y Axis" value="Y Axis">
+-                </div>
+-
+-                <div class="control-group">
+-                    <label>Line Color</label>
+-                    <div class="color-picker-wrapper">
+-                        <input type="color" id="line-color" value="#4F46E5">
+-                        <input type="text" id="line-color-text" value="#4F46E5" readonly>
+-                    </div>
+-                </div>
+-            </div>
+-
+-            <div class="controls-section actions">
+-                <button id="save-btn" class="btn btn-primary">
+-                    Save Graph
+-                </button>
+-            </div>
+-        </aside>
+-
+-        <!-- Main Chart Area -->
+-        <main class="main-content">
+-            <div class="chart-wrapper">
+-                <canvas id="main-chart"></canvas>
+-                <div id="placeholder-msg" class="placeholder-msg">
+-                    Drag & Drop a data file to visualize
+-                </div>
+-            </div>
+-        </main>
+-    </div>
+-
+-    <script src="app.js"></script>
+-</body>
+-
++<!DOCTYPE html>
++<html lang="ja">
++
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title>Graph Plotter Pro</title>
++    <!-- Fonts -->
++    <link rel="preconnect" href="https://fonts.googleapis.com">
++    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
++    <link
++        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap"
++        rel="stylesheet">
++    <!-- Chart.js -->
++    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
++    <link rel="stylesheet" href="style.css">
++</head>
++
++<body>
++    <div class="app-container">
++        <!-- Sidebar Controls -->
++        <aside class="sidebar">
++            <div class="brand">
++                <h1>Graph Plotter</h1>
++                <span class="badge">PRO</span>
++            </div>
++
++            <div class="controls-section">
++                <h2>Data Source</h2>
++                <div id="drop-zone" class="drop-zone">
++                    <p>Drop file here</p>
++                    <small>.txt .dat .csv</small>
++                    <input type="file" id="file-input" hidden>
++                </div>
++                <div class="file-info" id="file-info" style="display: none;">
++                    <!-- This will now just be a clear button mostly, or general status -->
++                    <span id="loading-msg">Processed files:</span>
++                </div>
++            </div>
++
++            <!-- New Section: Datasets -->
++            <div class="controls-section">
++                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
++                    <h2 style="margin-bottom:0;">Datasets</h2>
++                    <button id="clear-btn"
++                        style="padding: 2px 8px; font-size: 0.7rem; background: #334155; border:none; color:white; border-radius:4px; cursor:pointer;">CLEAR</button>
++                </div>
++                <div id="dataset-list" class="dataset-list">
++                    <!-- Items will be injected here -->
++                </div>
++            </div>
++
++            <div class="controls-section">
++                <h2>Graph Settings</h2>
++
++                <div class="control-group">
++                    <label>Title</label>
++                    <input type="text" id="chart-title" placeholder="Graph Title" value="My Data Graph">
++                </div>
++
++                <div class="control-group">
++                    <label>X Axis Label</label>
++                    <input type="text" id="x-label" placeholder="X Axis" value="X Axis">
++                </div>
++
++                <div class="control-group">
++                    <label>Y Axis Label</label>
++                    <input type="text" id="y-label" placeholder="Y Axis" value="Y Axis">
++                </div>
++
++                <div class="control-group">
++                    <label>X Data Column</label>
++                    <select id="x-column-select"></select>
++                </div>
++
++                <div class="control-group">
++                    <label>Y Data Column</label>
++                    <select id="y-column-select"></select>
++                </div>
++
++                <div class="control-group">
++                    <label>Line Color</label>
++                    <div class="color-picker-wrapper">
++                        <input type="color" id="line-color" value="#4F46E5">
++                        <input type="text" id="line-color-text" value="#4F46E5" readonly>
++                    </div>
++                </div>
++            </div>
++
++            <div class="controls-section actions">
++                <button id="save-btn" class="btn btn-primary">
++                    Save Graph
++                </button>
++            </div>
++        </aside>
++
++        <!-- Main Chart Area -->
++        <main class="main-content">
++            <div class="chart-wrapper">
++                <canvas id="main-chart"></canvas>
++                <div id="placeholder-msg" class="placeholder-msg">
++                    Drag & Drop a data file to visualize
++                </div>
++            </div>
++        </main>
++    </div>
++
++    <script src="app.js"></script>
++</body>
++
+ </html>
+\ No newline at end of file
+ 
+EOF
+)
