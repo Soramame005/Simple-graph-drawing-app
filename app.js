@@ -4,8 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const ctx = document.getElementById('main-chart').getContext('2d');
     const placeholderMsg = document.getElementById('placeholder-msg');
-    const fileInfo = document.getElementById('file-info');
-    const loadingMsg = document.getElementById('loading-msg');
 
     // Controls
     const titleInput = document.getElementById('chart-title');
@@ -25,14 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let chartInstance = null;
     let activeDatasetIndex = -1;
     const colorPalette = [
-        '#000000', // Black
-        '#FF0000', // Red
-        '#0000FF', // Blue
-        '#008000', // Green
-        '#800080', // Purple
-        '#FF8C00', // Dark Orange
-        '#008080', // Teal
-        '#8B4513'  // Saddle Brown
+        '#000000',
+        '#FF0000',
+        '#0000FF',
+        '#008000',
+        '#800080',
+        '#FF8C00',
+        '#008080',
+        '#8B4513'
     ];
 
     // --- Initialization ---
@@ -40,8 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeColumnSelectors();
 
     // --- Event Listeners ---
-
-    // Drag & Drop
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.classList.add('drag-over');
@@ -71,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Inputs
     titleInput.addEventListener('input', updateChartConfig);
     xLabelInput.addEventListener('input', updateChartConfig);
     yLabelInput.addEventListener('input', updateChartConfig);
@@ -92,8 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveBtn.addEventListener('click', saveGraph);
     clearBtn.addEventListener('click', clearAll);
 
-    // --- Core Functions ---
-
     function initChart() {
         const whiteBackgroundPlugin = {
             id: 'customCanvasBackgroundColor',
@@ -109,17 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chartInstance = new Chart(ctx, {
             type: 'line',
-            data: {
-                datasets: []
-            },
+            data: { datasets: [] },
             plugins: [whiteBackgroundPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'nearest',
-                    intersect: false
-                },
+                interaction: { mode: 'nearest', intersect: false },
                 plugins: {
                     title: {
                         display: true,
@@ -130,14 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     legend: {
                         display: true,
-                        labels: {
-                            color: '#000000',
-                            font: { family: 'sans-serif' }
-                        }
+                        labels: { color: '#000000', font: { family: 'sans-serif' } }
                     },
-                    tooltip: {
-                        enabled: true
-                    }
+                    tooltip: { enabled: true }
                 },
                 scales: {
                     x: {
@@ -155,14 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             borderColor: '#000000',
                             tickColor: '#000000'
                         },
-                        ticks: {
-                            color: '#000000',
-                            font: { size: 12 }
-                        },
-                        border: {
-                            color: '#000000',
-                            width: 1
-                        }
+                        ticks: { color: '#000000', font: { size: 12 } },
+                        border: { color: '#000000', width: 1 }
                     },
                     y: {
                         title: {
@@ -177,32 +154,93 @@ document.addEventListener('DOMContentLoaded', () => {
                             borderColor: '#000000',
                             tickColor: '#000000'
                         },
-                        ticks: {
-                            color: '#000000',
-                            font: { size: 12 }
-                        },
-                        border: {
-                            color: '#000000',
-                            width: 1
-                        }
+                        ticks: { color: '#000000', font: { size: 12 } },
+                        border: { color: '#000000', width: 1 }
                     }
                 },
-                layout: {
-                    padding: 20
-                }
+                layout: { padding: 20 }
             }
         });
     }
 
-    function handleFile(file) {
-        setFileStatus(`${file.name} を読み込み中...`);
+    function initializeColumnSelectors() {
+        populateColumnSelectors(2, 0, 1);
+        xColumnSelect.disabled = true;
+        yColumnSelect.disabled = true;
+    }
 
+    function populateColumnSelectors(maxColumns, xColumn, yColumn) {
+        xColumnSelect.innerHTML = '';
+        yColumnSelect.innerHTML = '';
+        for (let i = 0; i < maxColumns; i++) {
+            const optionX = document.createElement('option');
+            optionX.value = String(i);
+            optionX.textContent = `Column ${i + 1}`;
+            xColumnSelect.appendChild(optionX);
+
+            const optionY = document.createElement('option');
+            optionY.value = String(i);
+            optionY.textContent = `Column ${i + 1}`;
+            yColumnSelect.appendChild(optionY);
+        }
+        xColumnSelect.value = String(xColumn);
+        yColumnSelect.value = String(yColumn);
+    }
+
+    function normalizeColumns(maxColumns, xColumn, yColumn) {
+        const safeX = Number.isInteger(xColumn) && xColumn >= 0 ? Math.min(xColumn, maxColumns - 1) : 0;
+        const safeYDefault = maxColumns > 1 ? 1 : 0;
+        const safeY = Number.isInteger(yColumn) && yColumn >= 0 ? Math.min(yColumn, maxColumns - 1) : safeYDefault;
+        return { xColumn: safeX, yColumn: safeY };
+    }
+
+    function getMaxColumns(text) {
+        const lines = text.trim().split(/\r?\n/);
+        let maxColumns = 1;
+        lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                return;
+            }
+            const parts = trimmed.split(/[\s,]+/);
+            maxColumns = Math.max(maxColumns, parts.length);
+        });
+        return maxColumns;
+    }
+
+    function parseData(text, xColumn, yColumn) {
+        const lines = text.trim().split(/\r?\n/);
+        const points = [];
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                return;
+            }
+
+            const parts = trimmed.split(/[\s,]+/);
+            const y = parseFloat(parts[yColumn]);
+            if (Number.isNaN(y)) {
+                return;
+            }
+
+            const xCandidate = parseFloat(parts[xColumn]);
+            const x = Number.isNaN(xCandidate) ? index : xCandidate;
+            points.push({ x, y });
+        });
+
+        return points;
+    }
+
+    function handleFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
-            const { rows, maxColumns } = parseRows(text);
-            if (rows.length === 0) {
-                setFileStatus(`${file.name}: 数値データが見つかりませんでした`, true);
+            const maxColumns = getMaxColumns(text);
+            const initial = normalizeColumns(maxColumns, 0, maxColumns > 1 ? 1 : 0);
+            const dataPoints = parseData(text, initial.xColumn, initial.yColumn);
+
+            if (dataPoints.length === 0) {
                 if (chartInstance.data.datasets.length === 0) {
                     placeholderMsg.style.display = 'block';
                 }
@@ -210,81 +248,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             placeholderMsg.style.display = 'none';
-
-            prepareColumnSelectorsForColumnCount(maxColumns);
-
-            const selectedX = parseInt(xColumnSelect.value, 10);
-            const selectedY = parseInt(yColumnSelect.value, 10);
-            const xColumn = Number.isInteger(selectedX) && selectedX < maxColumns ? selectedX : 0;
-            const yColumn = Number.isInteger(selectedY) && selectedY < maxColumns
-                ? selectedY
-                : Math.min(1, maxColumns - 1);
-
-            const dataPoints = buildPoints(rows, xColumn, yColumn, maxColumns);
-            addDataset(file.name, dataPoints, { rows, maxColumns, xColumn, yColumn });
-            syncColumnSelectorsWithDataset(chartInstance.data.datasets[activeDatasetIndex]);
-            setFileStatus(`${file.name}: ${dataPoints.length} points loaded`);
+            addDataset(file.name, text, maxColumns, initial.xColumn, initial.yColumn, dataPoints);
         };
-        reader.onerror = () => {
-            setFileStatus(`${file.name}: ファイルの読み込みに失敗しました`, true);
-        };
-
         reader.readAsText(file);
-
         fileInput.value = '';
     }
 
-
-    function setFileStatus(message, isError = false) {
-        fileInfo.style.display = 'block';
-        loadingMsg.textContent = message;
-        loadingMsg.style.color = isError ? '#fca5a5' : '';
-    }
-
-    function parseRows(text) {
-        const lines = text.trim().split(/\r?\n/);
-        const rows = [];
-        let maxColumns = 0;
-
-        lines.forEach((line) => {
-            const trimmed = line.trim();
-            if (!trimmed) return;
-
-            const parts = trimmed.split(/[\s,]+/);
-            const numericRow = parts.map((part) => parseFloat(part));
-            const hasValidNumber = numericRow.some((value) => !isNaN(value));
-            if (!hasValidNumber) return;
-
-            maxColumns = Math.max(maxColumns, numericRow.length);
-            rows.push(numericRow);
-        });
-
-        return { rows, maxColumns };
-    }
-
-    function buildPoints(rows, xColumn, yColumn, maxColumns) {
-        const points = [];
-
-        rows.forEach((row, index) => {
-            if (maxColumns === 1) {
-                const y = row[0];
-                if (!isNaN(y)) {
-                    points.push({ x: index, y });
-                }
-                return;
-            }
-
-            const x = row[xColumn];
-            const y = row[yColumn];
-            if (!isNaN(x) && !isNaN(y)) {
-                points.push({ x, y });
-            }
-        });
-
-        return points;
-    }
-
-    function addDataset(name, dataPoints, meta) {
+    function addDataset(name, rawText, maxColumns, xColumn, yColumn, dataPoints) {
         const nextIndex = chartInstance.data.datasets.length;
         const color = colorPalette[nextIndex % colorPalette.length];
 
@@ -299,10 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
             pointBackgroundColor: color,
             fill: false,
             showLine: true,
-            rawRows: meta.rows,
-            maxColumns: meta.maxColumns,
-            xColumn: meta.xColumn,
-            yColumn: meta.yColumn
+            rawText,
+            maxColumns,
+            xColumn,
+            yColumn
         };
 
         chartInstance.data.datasets.push(newDataset);
@@ -311,77 +281,45 @@ document.addEventListener('DOMContentLoaded', () => {
         activeDatasetIndex = nextIndex;
         renderDatasetList();
         updateColorInputs(color);
+        syncColumnSelectorsForActiveDataset();
     }
 
-    function updateActiveDatasetColumns() {
-        if (activeDatasetIndex === -1 || !chartInstance) return;
-
-        const dataset = chartInstance.data.datasets[activeDatasetIndex];
-        if (!dataset) return;
-
-        const xColumn = parseInt(xColumnSelect.value, 10);
-        const yColumn = parseInt(yColumnSelect.value, 10);
-
-        if (!Number.isInteger(xColumn) || !Number.isInteger(yColumn)) return;
-
-        dataset.xColumn = xColumn;
-        dataset.yColumn = yColumn;
-        dataset.data = buildPoints(dataset.rawRows, xColumn, yColumn, dataset.maxColumns);
-
-        chartInstance.update();
-        renderDatasetList();
-    }
-
-    function initializeColumnSelectors() {
-        prepareColumnSelectorsForColumnCount(2);
-    }
-
-    function prepareColumnSelectorsForColumnCount(maxColumns) {
-        const targetColumns = Math.max(1, maxColumns);
-        const selectedX = parseInt(xColumnSelect.value, 10);
-        const selectedY = parseInt(yColumnSelect.value, 10);
-
-        const nextX = Number.isInteger(selectedX) ? Math.min(selectedX, targetColumns - 1) : 0;
-        const nextYDefault = targetColumns > 1 ? 1 : 0;
-        const nextY = Number.isInteger(selectedY) ? Math.min(selectedY, targetColumns - 1) : nextYDefault;
-
-        const columnOptions = Array.from({ length: targetColumns }, (_, index) => ({
-            value: String(index),
-            label: `Column ${index + 1}`
-        }));
-
-        populateColumnSelect(xColumnSelect, columnOptions, nextX);
-        populateColumnSelect(yColumnSelect, columnOptions, nextY);
-
-        const oneColumnOnly = targetColumns <= 1;
-        xColumnSelect.disabled = oneColumnOnly;
-        yColumnSelect.disabled = oneColumnOnly;
-    }
-
-    function syncColumnSelectorsWithDataset(dataset) {
-        if (!dataset) {
+    function syncColumnSelectorsForActiveDataset() {
+        if (activeDatasetIndex < 0 || !chartInstance.data.datasets[activeDatasetIndex]) {
             initializeColumnSelectors();
             return;
         }
 
-        prepareColumnSelectorsForColumnCount(dataset.maxColumns);
-        xColumnSelect.value = String(dataset.xColumn);
-        yColumnSelect.value = String(dataset.yColumn);
+        const dataset = chartInstance.data.datasets[activeDatasetIndex];
+        const normalized = normalizeColumns(dataset.maxColumns, dataset.xColumn, dataset.yColumn);
+        dataset.xColumn = normalized.xColumn;
+        dataset.yColumn = normalized.yColumn;
+
+        populateColumnSelectors(dataset.maxColumns, dataset.xColumn, dataset.yColumn);
+        const disable = dataset.maxColumns < 2;
+        xColumnSelect.disabled = disable;
+        yColumnSelect.disabled = disable;
     }
 
-    function populateColumnSelect(selectEl, options, selectedValue) {
-        selectEl.innerHTML = '';
+    function updateActiveDatasetColumns() {
+        if (activeDatasetIndex < 0 || !chartInstance.data.datasets[activeDatasetIndex]) {
+            return;
+        }
 
-        options.forEach((option) => {
-            const optionEl = document.createElement('option');
-            optionEl.value = option.value;
-            optionEl.textContent = option.label;
-            selectEl.appendChild(optionEl);
-        });
+        const dataset = chartInstance.data.datasets[activeDatasetIndex];
+        const selected = normalizeColumns(
+            dataset.maxColumns,
+            parseInt(xColumnSelect.value, 10),
+            parseInt(yColumnSelect.value, 10)
+        );
 
-        const normalizedSelectedValue = String(selectedValue);
-        const hasSelectedValue = options.some((option) => option.value === normalizedSelectedValue);
-        selectEl.value = hasSelectedValue ? normalizedSelectedValue : options[0]?.value ?? '';
+        dataset.xColumn = selected.xColumn;
+        dataset.yColumn = selected.yColumn;
+        dataset.data = parseData(dataset.rawText, dataset.xColumn, dataset.yColumn);
+
+        populateColumnSelectors(dataset.maxColumns, dataset.xColumn, dataset.yColumn);
+        chartInstance.update();
+        renderDatasetList();
     }
 
     function clearAll() {
@@ -389,10 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstance.update();
         activeDatasetIndex = -1;
         renderDatasetList();
-        initializeColumnSelectors();
         placeholderMsg.style.display = 'block';
-        fileInfo.style.display = 'none';
-        loadingMsg.style.color = '';
+        initializeColumnSelectors();
     }
 
     function removeDataset(index) {
@@ -405,22 +341,16 @@ document.addEventListener('DOMContentLoaded', () => {
             activeDatasetIndex--;
         }
 
-        if (activeDatasetIndex === -1 && chartInstance.data.datasets.length > 0) {
-            activeDatasetIndex = 0;
-        }
-
         renderDatasetList();
-
-        if (activeDatasetIndex !== -1) {
-            const activeDataset = chartInstance.data.datasets[activeDatasetIndex];
-            syncColumnSelectorsWithDataset(activeDataset);
-            updateColorInputs(activeDataset.borderColor);
-        } else {
-            initializeColumnSelectors();
-        }
 
         if (chartInstance.data.datasets.length === 0) {
             placeholderMsg.style.display = 'block';
+            initializeColumnSelectors();
+        } else {
+            if (activeDatasetIndex === -1) {
+                activeDatasetIndex = 0;
+            }
+            syncColumnSelectorsForActiveDataset();
         }
     }
 
@@ -433,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <div class="color-dot" style="background-color: ${ds.borderColor}"></div>
                 <div class="name" title="${ds.label}">${ds.label}</div>
-                <div class="columns">X:C${ds.xColumn + 1} / Y:C${ds.yColumn + 1}</div>
                 <button class="delete-btn" title="Remove">×</button>
             `;
 
@@ -442,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeDatasetIndex = index;
                 renderDatasetList();
                 updateColorInputs(ds.borderColor);
-                syncColumnSelectorsWithDataset(ds);
+                syncColumnSelectorsForActiveDataset();
             });
 
             item.querySelector('.delete-btn').addEventListener('click', (e) => {
@@ -467,7 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chartInstance.options.plugins.title.text = titleInput.value;
         chartInstance.options.scales.x.title.text = xLabelInput.value;
         chartInstance.options.scales.y.title.text = yLabelInput.value;
-
         chartInstance.update();
     }
 
