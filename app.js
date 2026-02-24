@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const yLabelInput = document.getElementById('y-label');
     const colorInput = document.getElementById('line-color');
     const colorText = document.getElementById('line-color-text');
-    const xColumnSelect = document.getElementById('x-column-select');
-    const yColumnSelect = document.getElementById('y-column-select');
     const saveBtn = document.getElementById('save-btn');
+
+    const { xColumnSelect, yColumnSelect } = ensureColumnSelectors();
 
     // Dataset Management
     const datasetListEl = document.getElementById('dataset-list');
@@ -86,6 +86,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveBtn.addEventListener('click', saveGraph);
     clearBtn.addEventListener('click', clearAll);
+
+
+    function ensureColumnSelectors() {
+        const existingX = document.getElementById('x-column-select');
+        const existingY = document.getElementById('y-column-select');
+
+        if (existingX && existingY) {
+            return { xColumnSelect: existingX, yColumnSelect: existingY };
+        }
+
+        const colorGroup = colorInput.closest('.control-group');
+        const createGroup = (labelText, selectId) => {
+            const group = document.createElement('div');
+            group.className = 'control-group';
+
+            const label = document.createElement('label');
+            label.textContent = labelText;
+
+            const select = document.createElement('select');
+            select.id = selectId;
+
+            group.appendChild(label);
+            group.appendChild(select);
+            return { group, select };
+        };
+
+        const xGroup = createGroup('X Data Column', 'x-column-select');
+        const yGroup = createGroup('Y Data Column', 'y-column-select');
+
+        colorGroup.parentNode.insertBefore(xGroup.group, colorGroup);
+        colorGroup.parentNode.insertBefore(yGroup.group, colorGroup);
+
+        return { xColumnSelect: xGroup.select, yColumnSelect: yGroup.select };
+    }
 
     function initChart() {
         const whiteBackgroundPlugin = {
