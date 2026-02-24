@@ -1,9 +1,9 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/app.js b/app.js
-index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea41c85dd93 100644
+index 38d308e74b672190fee97c9adbabb34382bb5d81..06a04e13b1baefbf79d1a844896f4f935ac286f9 100644
 --- a/app.js
 +++ b/app.js
-@@ -1,346 +1,458 @@
+@@ -1,346 +1,447 @@
 -document.addEventListener('DOMContentLoaded', () => {
 -    // --- Elements ---
 -    const dropZone = document.getElementById('drop-zone');
@@ -387,7 +387,7 @@ index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea4
 +
 +    // --- Initialization ---
 +    initChart();
-+    initializeColumnSelectors();
++    setColumnSelectorsDisabledState(true);
 +
 +    // --- Event Listeners ---
 +
@@ -555,8 +555,6 @@ index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea4
 +                return;
 +            }
 +
-+            prepareColumnSelectorsForColumnCount(maxColumns);
-+
 +            const selectedX = parseInt(xColumnSelect.value, 10);
 +            const selectedY = parseInt(yColumnSelect.value, 10);
 +            const xColumn = Number.isInteger(selectedX) && selectedX < maxColumns ? selectedX : 0;
@@ -664,41 +662,23 @@ index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea4
 +        renderDatasetList();
 +    }
 +
-+    function initializeColumnSelectors() {
-+        prepareColumnSelectorsForColumnCount(2);
-+    }
++    function syncColumnSelectorsWithDataset(dataset) {
++        if (!dataset) {
++            setColumnSelectorsDisabledState(true);
++            return;
++        }
 +
-+    function prepareColumnSelectorsForColumnCount(maxColumns) {
-+        const targetColumns = Math.max(1, maxColumns);
-+        const selectedX = parseInt(xColumnSelect.value, 10);
-+        const selectedY = parseInt(yColumnSelect.value, 10);
-+
-+        const nextX = Number.isInteger(selectedX) ? Math.min(selectedX, targetColumns - 1) : 0;
-+        const nextYDefault = targetColumns > 1 ? 1 : 0;
-+        const nextY = Number.isInteger(selectedY) ? Math.min(selectedY, targetColumns - 1) : nextYDefault;
-+
-+        const columnOptions = Array.from({ length: targetColumns }, (_, index) => ({
++        const columnOptions = Array.from({ length: dataset.maxColumns }, (_, index) => ({
 +            value: String(index),
 +            label: `Column ${index + 1}`
 +        }));
 +
-+        populateColumnSelect(xColumnSelect, columnOptions, nextX);
-+        populateColumnSelect(yColumnSelect, columnOptions, nextY);
++        populateColumnSelect(xColumnSelect, columnOptions, dataset.xColumn);
++        populateColumnSelect(yColumnSelect, columnOptions, dataset.yColumn);
 +
-+        const oneColumnOnly = targetColumns <= 1;
++        const oneColumnOnly = dataset.maxColumns <= 1;
 +        xColumnSelect.disabled = oneColumnOnly;
 +        yColumnSelect.disabled = oneColumnOnly;
-+    }
-+
-+    function syncColumnSelectorsWithDataset(dataset) {
-+        if (!dataset) {
-+            initializeColumnSelectors();
-+            return;
-+        }
-+
-+        prepareColumnSelectorsForColumnCount(dataset.maxColumns);
-+        xColumnSelect.value = String(dataset.xColumn);
-+        yColumnSelect.value = String(dataset.yColumn);
 +    }
 +
 +    function populateColumnSelect(selectEl, options, selectedValue) {
@@ -716,12 +696,19 @@ index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea4
 +        selectEl.value = hasSelectedValue ? normalizedSelectedValue : options[0]?.value ?? '';
 +    }
 +
++    function setColumnSelectorsDisabledState(disabled) {
++        xColumnSelect.disabled = disabled;
++        yColumnSelect.disabled = disabled;
++    }
++
 +    function clearAll() {
 +        chartInstance.data.datasets = [];
 +        chartInstance.update();
 +        activeDatasetIndex = -1;
 +        renderDatasetList();
-+        initializeColumnSelectors();
++        setColumnSelectorsDisabledState(true);
++        xColumnSelect.innerHTML = '';
++        yColumnSelect.innerHTML = '';
 +        placeholderMsg.style.display = 'block';
 +    }
 +
@@ -746,7 +733,9 @@ index 38d308e74b672190fee97c9adbabb34382bb5d81..f061ab87781574b7ec249106d0de0ea4
 +            syncColumnSelectorsWithDataset(activeDataset);
 +            updateColorInputs(activeDataset.borderColor);
 +        } else {
-+            initializeColumnSelectors();
++            setColumnSelectorsDisabledState(true);
++            xColumnSelect.innerHTML = '';
++            yColumnSelect.innerHTML = '';
 +        }
 +
 +        if (chartInstance.data.datasets.length === 0) {
