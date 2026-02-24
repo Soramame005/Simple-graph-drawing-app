@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fileInput = document.getElementById('file-input');
     const ctx = document.getElementById('main-chart').getContext('2d');
     const placeholderMsg = document.getElementById('placeholder-msg');
+    const fileInfo = document.getElementById('file-info');
+    const loadingMsg = document.getElementById('loading-msg');
 
     // Controls
     const titleInput = document.getElementById('chart-title');
@@ -193,15 +195,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFile(file) {
-        placeholderMsg.style.display = 'none';
+        setFileStatus(`${file.name} を読み込み中...`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
             const { rows, maxColumns } = parseRows(text);
             if (rows.length === 0) {
+                setFileStatus(`${file.name}: 数値データが見つかりませんでした`, true);
+                if (chartInstance.data.datasets.length === 0) {
+                    placeholderMsg.style.display = 'block';
+                }
                 return;
             }
+
+            placeholderMsg.style.display = 'none';
 
             prepareColumnSelectorsForColumnCount(maxColumns);
 
@@ -215,10 +223,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataPoints = buildPoints(rows, xColumn, yColumn, maxColumns);
             addDataset(file.name, dataPoints, { rows, maxColumns, xColumn, yColumn });
             syncColumnSelectorsWithDataset(chartInstance.data.datasets[activeDatasetIndex]);
+            setFileStatus(`${file.name}: ${dataPoints.length} points loaded`);
         };
+        reader.onerror = () => {
+            setFileStatus(`${file.name}: ファイルの読み込みに失敗しました`, true);
+        };
+
         reader.readAsText(file);
 
         fileInput.value = '';
+    }
+
+
+    function setFileStatus(message, isError = false) {
+        fileInfo.style.display = 'block';
+        loadingMsg.textContent = message;
+        loadingMsg.style.color = isError ? '#fca5a5' : '';
     }
 
     function parseRows(text) {
@@ -371,6 +391,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDatasetList();
         initializeColumnSelectors();
         placeholderMsg.style.display = 'block';
+        fileInfo.style.display = 'none';
+        loadingMsg.style.color = '';
     }
 
     function removeDataset(index) {
